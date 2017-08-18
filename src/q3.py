@@ -6,9 +6,11 @@ from pathlib import Path  # to access the home directory
 
 def createdataset(filepath):
     """
-
-    :param filepath:
-    :return:
+    take the file input and divide the dataset into test
+    and training data
+    :param filepath: the absolute path of the csv file
+    :return: training dataset, test dataset, and the index
+    of the class
     """
     home = str(Path.home())
     with open(os.path.abspath(home + filepath), 'r') as f:
@@ -38,7 +40,7 @@ def findentropy(classlist):
         return 0
     finalentropy = 0.0
     for value in classlist:
-        finalentropy += (value / datasetsize) * log((value / datasetsize), 2)
+        finalentropy -= (value / datasetsize) * log((value / datasetsize), 2)
     return finalentropy
 
 
@@ -64,10 +66,11 @@ def informationgain(attributeindex, dataset, classindex, typeofattribute):
                 attributeproperties[row[attributeindex]][row[classindex]] += 1
     else:
         print(1)
-    entropyofparent = findentropy(classproperties)
-    entropyofchildren = 0.0
+    entropyofparent = findentropy(classproperties)                      # this is the entropy of the parent
+    entropyofchildren = 0.0                                             # this is the entropy of the children
     for key in attributeproperties:
-        entropyofchildren += findentropy(attributeproperties[key])
+        countinattribute = attributeproperties[key][0] + attributeproperties[key][1]
+        entropyofchildren += (findentropy(attributeproperties[key]))*countinattribute/len(dataset)
     return entropyofparent - entropyofchildren
 
 
