@@ -1,13 +1,5 @@
-#!/usr/bin/env python
-
-import sys
 import os
 import numpy as np
-
-"""Feel free to add any extra classes/functions etc as and when needed.
-This code is provided purely as a starting point to give you a fair idea
-of how to go about implementing machine learning algorithms in general as
-a part of the first assignment. Understand the code well"""
 
 
 class FeatureVector(object):
@@ -17,54 +9,93 @@ class FeatureVector(object):
         self.Y = np.zeros((numdata,), dtype=np.int)
         self.cur_index = 0
 
-    def make_featurevector(self, input, classid):
-        """
-        Takes input the documents and outputs the feature vectors as X and classids as Y.
-        """
-        np.copyto(self.X[self.cur_index], input)
+    def make_featurevector(self, inputlist, classid):
+        np.copyto(self.X[self.cur_index], inputlist)
         self.Y[self.cur_index] = classid
+        if np.linalg.norm(self.X[self.cur_index]) == 0.0:
+            print classid, self.X[self.cur_index]
+            exit()
         self.cur_index += 1
 
 
 class KNN(object):
-    def __init__(self, trainVec, testVec):
-        self.X_train = trainVec.X
-        self.Y_train = trainVec.Y
-        self.X_test = testVec.X
-        self.Y_test = testVec.Y
-        self.metric = Metrics('accuracy')
+    def __init__(self, train_vec, test_vec):
+        self.X_train = train_vec.X
+        self.Y_train = train_vec.Y
+        self.X_test = test_vec.X
+        self.Y_test = test_vec.Y
+        self.metric = Metrics('f1', 10)
+        self.class_array = []
 
     def classify(self, nn=1):
         """
         Takes input X_train, Y_train, X_test and Y_test and displays the accuracies.
         """
+        for test_point in self.X_test:
+            temp_distances = []
+            if np.linalg.norm(test_point) == 0.0:
+                self.class_array.append(0)
+                continue
+            class_count = np.zeros(11)
+            for (data_point, classid) in zip(self.X_train, self.Y_train):
+                if classid == 0:
+                    break
+                temp_distances.append((self.cosine_distance(data_point, test_point), classid))
+            temp_distances.sort(key=lambda x: x[0])
+            for i in range(nn):
+                class_count[temp_distances[i][1]] += float(1)/(temp_distances[i][0]**2)
+            self.class_array.append(np.argmax(class_count))
+        print (self.class_array == self.Y_test).sum()
+
+    @staticmethod
+    def cosine_distance(data_point_1, data_point_2):
+        return 1 - np.dot(data_point_1, data_point_2) / (np.linalg.norm(data_point_2) * np.linalg.norm(data_point_1))
+
+    def print_metrics(self):
+        self.metric.get_confmatrix(self.class_array, self.Y_test)
 
 
 class Metrics(object):
-    def __init__(self, metric):
+    def __init__(self, metric, number_of_classes):
         self.metric = metric
-
-    def score(self):
-        if self.metric == 'accuracy':
-            return self.accuracy()
-        elif self.metric == 'f1':
-            return self.f1_score()
+        self.number_of_classes = number_of_classes
+        self.confusion_matrix = np.zeros([number_of_classes+1, number_of_classes+1], dtype=np.int)
 
     def get_confmatrix(self, y_pred, y_test):
-        """
-        Implements a confusion matrix
-        """
+        for i in range(len(y_pred)):
+            self.confusion_matrix[y_pred[i]][y_test[i]] += 1
+        print "accuracy = ", self.accuracy(y_pred, y_test)
+        print "f1_score = ", self.f1_score()
 
-    def accuracy(self):
-        """
-        Implements the accuracy function
-        """
+    @staticmethod
+    def accuracy(y_pred, y_test):
+        y_pred = np.array(y_pred)
+        return float((y_pred == y_test).sum())*100/y_pred.size
 
     def f1_score(self):
         """
         Implements the f1-score function
         """
+        FP = np.zeros(self.number_of_classes+1)
+        FN = np.zeros(self.number_of_classes+1)
+        TP = np.zeros(self.number_of_classes+1)
+        for i in range(self.number_of_classes+1):
+            for j in range(self.number_of_classes+1):
+                if i == j:
+                    TP[i] += self.confusion_matrix[i][j]
+                else:
+                    FP[i] += self.confusion_matrix[i][j]
+                    FN[j] += self.confusion_matrix[i][j]
+        precision = np.zeros(self.number_of_classes+1)
+        recall = np.zeros(self.number_of_classes+1)
+        f1_score = 0.0
+        for i in range(1, self.number_of_classes+1):
+            precision[i] = TP[i] / (TP[i] + FP[i])
+            recall[i] = TP[i] / (TP[i] + FN[i])
+            f1_score += (2*precision[i]*recall[i]) / (precision[i] + recall[i])
 
+        f1_score /= self.number_of_classes
+        return f1_score
 
 if __name__ == '__main__':
     datadir = './datasets/q4/'
@@ -79,6 +110,7 @@ if __name__ == '__main__':
     common_words = ['the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'it', 'for']
     for idir in inputdir:
         files = 0
+        classid = 1
         for c in classes:
             listing = os.listdir(datadir + idir + c)
             path = datadir + idir + c
@@ -88,11 +120,14 @@ if __name__ == '__main__':
                     for line in f:
                         if idir in ['train/']:
                             for word in line.split():
+                                word = word.lower()
                                 if word not in common_words:
                                     if word not in vocabulory:
                                         vocabulory[word] = index
                                         index += 1
+            classid += 1
         datasz.append(files)
+    vocabulory["UKN"] = index
     vocab = len(vocabulory)
     trainsz = datasz[0]
     testsz = datasz[1]
@@ -111,12 +146,16 @@ if __name__ == '__main__':
                 with open(path + filename, 'r') as f:
                     for line in f:
                         for word in line.split():
+                            word = word.lower()
                             if word in vocabulory:
                                 inputs[vocabulory[word]] += 1
-                if idir == 'train/':
-                    trainVec.make_featurevector(inputs, classid)
-                else:
-                    testVec.make_featurevector(inputs, classid)
+                            else:
+                                inputs[vocabulory["UKN"]] += 1
+                if np.linalg.norm(inputs) != 0.0:
+                    if idir == 'train/':
+                        trainVec.make_featurevector(inputs, classid)
+                    else:
+                        testVec.make_featurevector(inputs, classid)
             classid += 1
 
     print('Finished making features.')
@@ -124,4 +163,5 @@ if __name__ == '__main__':
     print(trainVec.X.shape, trainVec.Y.shape, testVec.X.shape, testVec.Y.shape)
 
     knn = KNN(trainVec, testVec)
-    knn.classify()
+    knn.classify(1)
+    knn.print_metrics()

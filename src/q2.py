@@ -4,12 +4,8 @@ import sys
 
 class Dataset(object):
     def __init__(self, filepath, status):
-        """
-
-        :rtype: object
-        """
-        self.home = "datasets/q2/"
-        self.my_data = np.genfromtxt(self.home + filepath, delimiter=',', dtype=float)
+        # self.home = "./datasets/q2/"
+        self.my_data = np.genfromtxt(filepath, delimiter=',', dtype=float)
         indices_with_nan = []
         for index, row in enumerate(self.my_data):
             if np.isnan(row).any():
@@ -87,7 +83,7 @@ class PerceptronTraining(object):
         length_of_sample = len(self.training_set[0])
         for row in self.testing_set:
             dot_product = np.dot(weight_vector, row[0:length_of_sample-1])
-            if dot_product < 0 and int(row[length_of_sample-1]) == 0:
+            if dot_product <= 0 and int(row[length_of_sample-1]) == 0:
                 rightly_classified_samples += 1
             elif dot_product > 0 and int(row[length_of_sample-1]) == 1:
                 rightly_classified_samples += 1
@@ -98,8 +94,10 @@ class PerceptronTraining(object):
         rightly_classified_samples = 0
         for row in self.testing_set:
             s = 0
+            temp = []
             for i in range(k):
                 s += c[i]*np.sign(np.dot(row[0:length_of_sample-1], solution[i]))
+                temp.append(s)
             s = np.sign(s)
             if s == -1 and int(row[length_of_sample-1]) == 0:
                 rightly_classified_samples += 1
@@ -113,7 +111,7 @@ def main():
     test_dataset = Dataset(sys.argv[2], "test")
     perceptron_sample = PerceptronTraining(training_dataset.my_data, test_dataset.my_data)
     perceptron_sample.batch_perceptron_with_relaxation(500, 1, 0)
-    perceptron_sample.voted_perceptron(50)
+    perceptron_sample.voted_perceptron(25)
     print perceptron_sample.accuracy
 
 if __name__ == "__main__":
