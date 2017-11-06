@@ -22,8 +22,8 @@ class Datasets(object):
         dataset_normed = dataset / max_array  # this function will normalise the dataset to values between 0 and 1
         return dataset_normed
 
-    @staticmethod
-    def augment_vector(dataset):
+    def augment_vector(self, dataset):
+        # if self.train == 1:
         dataset[:, [0, len(dataset[0]) - 1]] = dataset[:, [len(dataset[0]) - 1, 0]]
         return np.insert(dataset, 0, 1, axis=1)
 
@@ -44,11 +44,10 @@ class PerceptronTraining(object):
         self.batch_perceptron_with_margin()
 
     def single_sample_perceptron(self):
-        print("single sample perceptron training started")
         solution_vector = np.random.uniform(0.0, 1.0, self.len_dataset - 1)
         count_of_rightly_classified = 0
         epochs = 0
-        while count_of_rightly_classified < np.shape(self.dataset)[0]:
+        while epochs < 500:
             epochs += 1
             count_of_rightly_classified = 0
             for row in self.dataset:
@@ -60,12 +59,11 @@ class PerceptronTraining(object):
         self.solution_vector_set.append(solution_vector)
 
     def single_sample_perceptron_with_margin(self):
-        print("single sample perceptron with margin training started")
         solution_vector = np.random.uniform(0.0, 1.0, self.len_dataset - 1)
         count_of_rightly_classified = 0
         epochs = 0
         margin = 0.3
-        while count_of_rightly_classified < np.shape(self.dataset)[0]:
+        while epochs < 500:
             epochs += 1
             count_of_rightly_classified = 0
             for row in self.dataset:
@@ -77,7 +75,6 @@ class PerceptronTraining(object):
         self.solution_vector_set.append(solution_vector)
 
     def batch_perceptron(self):
-        print("batch perceptron training started")
         solution_vector = np.random.uniform(0.0, 1.0, self.len_dataset - 1)
         count_of_rightly_classified = 0
         epochs = 0
@@ -95,12 +92,11 @@ class PerceptronTraining(object):
         self.solution_vector_set.append(solution_vector)
 
     def batch_perceptron_with_margin(self):
-        print("batch perceptron with margin training started")
         solution_vector = np.random.uniform(0.0, 1.0, self.len_dataset - 1)
         count_of_rightly_classified = 0
         epochs = 0
         learning_rate = 1.5
-        margin = 0.3
+        margin = 0.5
         while count_of_rightly_classified < np.shape(self.dataset)[0] and epochs < 100:
             epochs += 1
             batch_vector_to_be_added = np.zeros(self.len_dataset - 1)
@@ -116,23 +112,24 @@ class PerceptronTraining(object):
 
 
 def run_on_test_data(dataset, solution_vector_set):
-    len_dataset = len(dataset[0]) - 1
+    len_dataset = len(dataset[0])
     accuracy = np.full(len(solution_vector_set), 0.0)
     for index, vector in enumerate(solution_vector_set):
         for row in dataset:
             dot_product = np.dot(row[0:len_dataset - 1], vector)
-            if dot_product < 0 and int(row[len_dataset]) == 0:
+            if dot_product < 0:
+                print 0
+            else:
+                print 1
+            '''if dot_product < 0 and int(row[len_dataset]) == 0:
                 accuracy[index] += 1
             elif dot_product > 0 and int(row[len_dataset]) == 1:
                 accuracy[index] += 1
         accuracy[index] = np.divide(accuracy[index], np.shape(dataset)[0])
-        accuracy[index] = np.multiply(accuracy[index], 100)
-    print(accuracy)
-    # return accuracy
+        accuracy[index] = np.multiply(accuracy[index], 100)'''
 
 
 def main():
-    datadir = "./datasets/q1/"
     training_dataset = Datasets(sys.argv[1], 1)
     test_dataset = Datasets(sys.argv[2], 0)
     solution_class = PerceptronTraining(training_dataset.my_data)

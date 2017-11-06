@@ -4,27 +4,27 @@ import sys
 
 class Dataset(object):
     def __init__(self, filepath, status):
-        # self.home = "./datasets/q2/"
         self.my_data = np.genfromtxt(filepath, delimiter=',', dtype=float)
+        self.status = status
         indices_with_nan = []
         for index, row in enumerate(self.my_data):
             if np.isnan(row).any():
                 indices_with_nan.append(index)
         self.my_data = np.delete(self.my_data, indices_with_nan, axis=0)
-        self.my_data = Dataset.clean_data(self.my_data, status)
-        self.my_data = Dataset.normalize(self.my_data)
+        self.my_data = self.clean_data(self.my_data, status)
+        self.my_data = self.normalize(self.my_data)
 
-    @classmethod
-    def clean_data(cls, dataset, status):
+    def clean_data(self, dataset, status):
         new_dataset = np.delete(dataset, 0, 1)
-        for row in new_dataset:
-            assert isinstance(row, object)
-            if row[-1] == 4:
-                row[-1] = 1
-            elif row[-1] == 2:
-                row[-1] = 0
-                if status in ['training']:
-                    row *= -1
+        if self.status in ['training']:
+            for row in new_dataset:
+                assert isinstance(row, object)
+                if row[-1] == 4:
+                    row[-1] = 1
+                elif row[-1] == 2:
+                    row[-1] = 0
+                    if status in ['training']:
+                        row *= -1
         return new_dataset
 
     @classmethod
@@ -83,9 +83,13 @@ class PerceptronTraining(object):
         length_of_sample = len(self.training_set[0])
         for row in self.testing_set:
             dot_product = np.dot(weight_vector, row[0:length_of_sample-1])
-            if dot_product <= 0 and int(row[length_of_sample-1]) == 0:
+            if dot_product < 0:
+                print 2
+            else:
+                print 4
+            if dot_product <= 0 and int(row[length_of_sample-2]) == 0:
                 rightly_classified_samples += 1
-            elif dot_product > 0 and int(row[length_of_sample-1]) == 1:
+            elif dot_product > 0 and int(row[length_of_sample-2]) == 1:
                 rightly_classified_samples += 1
         self.accuracy.append(float(rightly_classified_samples)*100/float(np.shape(self.testing_set)[0]))
 
@@ -99,9 +103,13 @@ class PerceptronTraining(object):
                 s += c[i]*np.sign(np.dot(row[0:length_of_sample-1], solution[i]))
                 temp.append(s)
             s = np.sign(s)
-            if s == -1 and int(row[length_of_sample-1]) == 0:
+            if s == -1:
+                print 2
+            else:
+                print 4
+            if s == -1 and int(row[length_of_sample-2]) == 0:
                 rightly_classified_samples += 1
-            elif s == 1 and int(row[length_of_sample-1]) == 1:
+            elif s == 1 and int(row[length_of_sample-2]) == 1:
                 rightly_classified_samples += 1
         self.accuracy.append(float(rightly_classified_samples)*100/float(np.shape(self.testing_set)[0]))
 
@@ -109,10 +117,10 @@ class PerceptronTraining(object):
 def main():
     training_dataset = Dataset(sys.argv[1], "training")
     test_dataset = Dataset(sys.argv[2], "test")
+    print test_dataset.my_data.shape
     perceptron_sample = PerceptronTraining(training_dataset.my_data, test_dataset.my_data)
     perceptron_sample.batch_perceptron_with_relaxation(500, 1, 0)
     perceptron_sample.voted_perceptron(25)
-    print perceptron_sample.accuracy
 
 if __name__ == "__main__":
     main()
